@@ -9,6 +9,8 @@ env/
 ENV/
 .env
 .pytest_cache/
+.vercel/
+public/
 
 # OS / IDE
 .DS_Store

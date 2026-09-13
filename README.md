@@ -127,6 +127,23 @@ python test_app.py
 
 ---
 
+## Vercel deployment
+
+Import `Munaalkebasi/ExamScope` into Vercel and select the Flask framework.
+The existing `app.py` exports the application; no separate server is needed.
+`vercel.json` runs `build_vercel.py` to publish the existing static assets at
+their unchanged `/static/` URLs. Dependencies come from `requirements.txt`.
+
+On Vercel, SQLite uses `/tmp/examscope/examscope.db` and the existing startup
+code initializes and seeds demo data. This storage is ephemeral: changes may
+disappear on cold starts, redeployments, or when requests use another instance.
+Visitors using the same instance share demo data. Do not use this deployment
+for private records or reliable progress storage. Export any data you want to
+keep. Local and Render deployments retain the existing database path.
+
+Keep Render available until the Vercel deployment and all four main pages
+have been verified. Durable storage requires a separate database decision.
+
 ## Future Improvements
 
 - **Sub-Topic Breakdowns**: Support nested sub-topics under major exam units.

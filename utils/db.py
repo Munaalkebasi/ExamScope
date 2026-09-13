@@ -1,9 +1,11 @@
 import os
 import sqlite3
 
-DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database')
+SCHEMA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database')
+# Vercel's writable storage is temporary and is suitable only for demo data.
+DB_DIR = '/tmp/examscope' if os.environ.get('VERCEL') == '1' else SCHEMA_DIR
 DB_PATH = os.path.join(DB_DIR, 'examscope.db')
-SCHEMA_PATH = os.path.join(DB_DIR, 'schema.sql')
+SCHEMA_PATH = os.path.join(SCHEMA_DIR, 'schema.sql')
 
 def get_db_connection():
     os.makedirs(DB_DIR, exist_ok=True)
