@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if settings.theme == 'dark' or settings.theme == 'system' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExamScope — Academic Exam Risk Radar</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              950: '#070A12',
+              900: '#0B0F19',
+              850: '#101726',
+              800: '#161F33',
+              700: '#1E293B',
+              600: '#334155',
+            },
+            risk: {
+              critical: { DEFAULT: '#EF4444', light: '#F87171', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)' },
+              high: { DEFAULT: '#F59E0B', light: '#FBBF24', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)' },
+              moderate: { DEFAULT: '#8B5CF6', light: '#A78BFA', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)' },
+              safe: { DEFAULT: '#10B981', light: '#34D399', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' }
+            },
+            scope: { green: '#10B981', cyan: '#06B6D4' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Custom Stylesheet & JS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/radar.js') }}"></script>
+</head>
+<body class="bg-slate-50 dark:bg-navy-950 text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-scope-green selection:text-navy-950 min-h-screen">
+  
+  <!-- Navbar -->
+  <header class="sticky top-0 z-40 bg-white/90 dark:bg-navy-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div className="flex items-center gap-6">
+        <a href="{{ url_for('index') }}" class="flex items-center gap-3 select-none">
+          <div class="relative flex items-center justify-center w-9 h-9">
+            <div class="absolute inset-0 rounded-full border border-scope-green/40 animate-ping opacity-25"></div>
+            <div class="absolute inset-0 rounded-full bg-slate-100 dark:bg-navy-800 border-2 border-scope-green/60 shadow-[0_0_15px_rgba(16,185,129,0.25)] flex items-center justify-center overflow-hidden">
+              <div class="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(16,185,129,0.45)_360deg)] animate-radar-sweep origin-center rounded-full"></div>
+              <svg class="w-1/2 h-1/2 text-scope-green relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                <path d="M9 10l2 2 4-4"/>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <div class="font-bold text-xl tracking-tight text-slate-900 dark:text-white leading-none">
+              Exam<span class="text-scope-green">Scope</span>
+            </div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block mt-0.5">
+              See what is most likely to hurt your grade
+            </div>
+          </div>
+        </a>
+
+        <!-- Desktop Exam Switcher -->
+        {% if exams %}
+        <div class="relative hidden md:block group">
+          <button class="flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-100 dark:bg-navy-850 border border-slate-300 dark:border-slate-700/80 rounded-xl text-sm font-semibold text-slate-800 dark:text-white shadow-sm">
+            <svg class="w-4 h-4 text-scope-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <span>{% if active_exam %}{{ active_exam.course_code }} — {{ active_exam.exam_name }}{% else %}Select Exam{% endif %}</span>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+
+          <!-- Dropdown -->
+          <div class="absolute left-0 mt-2 w-64 bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-xl py-2 z-50 hidden group-hover:block">
+            <div class="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Your Exams</div>
+            <div class="max-h-56 overflow-y-auto my-1">
+              {% for e in exams %}
+              <form action="{{ url_for('select_exam', exam_id=e.id) }}" method="POST">
+                <button type="submit" class="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors {% if active_exam and active_exam.id == e.id %}bg-scope-green/10 text-scope-green border-l-2 border-scope-green{% else %}text-slate-700 dark:text-slate-200{% endif %}">
+                  <div class="font-bold">{{ e.course_code }}</div>
+                  <div class="text-[11px] text-slate-400 font-normal">{{ e.exam_name }}</div>
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+            <div class="border-t border-slate-200 dark:border-slate-800 pt-1.5 px-2">
+              <button onclick="openModal('add-exam-modal')" class="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-scope-green hover:bg-scope-green/10 rounded-xl">
+                + Add New Exam
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center gap-1.5 bg-slate-100 dark:bg-navy-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+        <a href="{{ url_for('index') }}" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_tab == 'radar' %}bg-scope-green text-navy-950 shadow-md{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 12l4-4"/></svg>
+          Exam Radar
+        </a>
+        <a href="{{ url_for('topics_page') }}" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_tab == 'topics' %}bg-scope-green text-navy-950 shadow-md{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          Topics
+        </a>
+        <a href="{{ url_for('progress_page') }}" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_tab == 'progress' %}bg-scope-green text-navy-950 shadow-md{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          Progress
+        </a>
+        <a href="{{ url_for('settings_page') }}" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_tab == 'settings' %}bg-scope-green text-navy-950 shadow-md{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Settings
+        </a>
+      </nav>
+
+      <!-- New Exam Button -->
+      <div>
+        <button onclick="openModal('add-exam-modal')" class="flex items-center gap-1.5 px-3.5 py-2 bg-scope-green/10 border border-scope-green/30 text-scope-green hover:bg-scope-green hover:text-navy-950 font-bold text-xs rounded-xl transition-all">
+          + New Exam
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-16">
+    
+    <!-- Active Exam Header Banner -->
+    {% if active_exam %}
+    <div class="bg-white dark:bg-navy-850/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 mb-6 shadow-lg dark:shadow-xl relative overflow-hidden backdrop-blur-sm">
+      <div class="absolute top-0 right-0 w-64 h-full opacity-10 bg-radar-grid pointer-events-none"></div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+              {{ active_exam.course_code }}
+            </span>
+            <span class="text-xl sm:text-2xl font-semibold text-slate-700 dark:text-slate-300">
+              {{ active_exam.exam_name }}
+            </span>
+            
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold {% if days_remaining <= 0 %}text-risk-critical-light bg-risk-critical-bg border-risk-critical-border{% elif days_remaining <= 3 %}text-risk-high-light bg-risk-high-bg border-risk-high-border{% else %}text-scope-green bg-scope-green/10 border-scope-green/30{% endif %}">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 6v6l4 2"/></svg>
+              {% if days_remaining < 0 %}Exam Passed{% elif days_remaining == 0 %}EXAM TODAY!{% else %}{{ days_remaining }} days remaining{% endif %}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div>Date: {{ active_exam.exam_date }}</div>
+            <span>•</span>
+            <div>{{ readiness.total_topics if readiness else 0 }} topics tracked</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          {% if readiness %}
+          <div class="hidden lg:flex items-center gap-3 bg-slate-100 dark:bg-navy-900/90 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Overall Readiness</div>
+              <div class="text-base font-extrabold text-slate-900 dark:text-white">
+                {{ readiness.readiness_score }}%
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="flex items-center gap-2">
+            <button onclick="openModal('edit-exam-modal')" class="px-3 py-2 bg-slate-100 dark:bg-navy-900 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700" title="Edit Exam Details">
+              Edit Exam
+            </button>
+
+            <form action="{{ url_for('delete_exam', exam_id=active_exam.id) }}" method="POST" onsubmit="return confirm('Delete exam {{ active_exam.course_code }} - {{ active_exam.exam_name }} and all its topics?')">
+              <button type="submit" class="px-3 py-2 bg-slate-100 dark:bg-navy-900 text-risk-critical-light font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-risk-critical-bg" title="Delete Exam">
+                Delete
+              </button>
+            </form>
+
+            <button onclick="openModal('add-topic-modal')" class="flex items-center gap-2 px-4 py-2.5 bg-scope-green text-navy-950 font-bold text-xs rounded-xl hover:bg-emerald-400 shadow-lg shadow-scope-green/20">
+              + Add Topic
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Add Exam Modal -->
+  <div id="add-exam-modal" class="modal-overlay hidden">
+    <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700/60 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800 mb-4">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Add Upcoming Exam</h3>
+        <button onclick="closeModal('add-exam-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form action="{{ url_for('create_exam') }}" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Course Code / Name</label>
+          <input type="text" name="course_code" required placeholder="e.g. MATH 232 or PHYS 101" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Exam Name</label>
+          <input type="text" name="exam_name" required placeholder="e.g. Midterm 1, Final Exam" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Exam Date</label>
+          <input type="date" name="exam_date" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button type="button" onclick="closeModal('add-exam-modal')" class="px-4 py-2 text-xs font-bold text-slate-400">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-scope-green text-navy-950 rounded-xl">Create Exam</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Exam Modal -->
+  {% if active_exam %}
+  <div id="edit-exam-modal" class="modal-overlay hidden">
+    <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700/60 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800 mb-4">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Edit Exam Details</h3>
+        <button onclick="closeModal('edit-exam-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form action="{{ url_for('edit_exam', exam_id=active_exam.id) }}" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Course Code / Name</label>
+          <input type="text" name="course_code" value="{{ active_exam.course_code }}" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Exam Name</label>
+          <input type="text" name="exam_name" value="{{ active_exam.exam_name }}" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Exam Date</label>
+          <input type="date" name="exam_date" value="{{ active_exam.exam_date }}" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button type="button" onclick="closeModal('edit-exam-modal')" class="px-4 py-2 text-xs font-bold text-slate-400">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-scope-green text-navy-950 rounded-xl">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Add Topic Modal -->
+  <div id="add-topic-modal" class="modal-overlay hidden">
+    <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700/60 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800 mb-4">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Add New Exam Topic</h3>
+        <button onclick="closeModal('add-topic-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form action="{{ url_for('create_topic') }}" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Topic Name</label>
+          <input type="text" name="name" required placeholder="e.g. Eigenvalues, Vector Spaces" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span class="text-slate-400 uppercase">Confidence</span>
+              <span id="add-conf-val" class="text-scope-green font-bold">50%</span>
+            </div>
+            <input type="range" name="confidence" min="0" max="100" step="5" value="50" oninput="document.getElementById('add-conf-val').textContent = this.value + '%'" class="w-full">
+          </div>
+
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span class="text-slate-400 uppercase">Practice Score</span>
+              <span id="add-prac-val" class="text-amber-400 font-bold">50%</span>
+            </div>
+            <input type="range" name="practice_score" min="0" max="100" step="5" value="50" oninput="document.getElementById('add-prac-val').textContent = this.value + '%'" class="w-full">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Last Reviewed Date</label>
+          <input type="date" name="last_reviewed" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Notes (Optional)</label>
+          <textarea name="notes" rows="2" placeholder="Sub-topics, textbook pages..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button type="button" onclick="closeModal('add-topic-modal')" class="px-4 py-2 text-xs font-bold text-slate-400">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-scope-green text-navy-950 rounded-xl">Add Topic</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Topic Detail Drawer Modal -->
+  <div id="topic-detail-drawer" class="modal-overlay hidden">
+    <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-navy-900">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span id="drawer-risk-badge" class="badge-risk">Critical</span>
+              <span class="text-xs font-mono text-slate-400">Risk Score: <strong id="drawer-risk-score" class="text-white">82/100</strong></span>
+            </div>
+            <h3 id="drawer-topic-name" class="text-2xl font-extrabold text-slate-900 dark:text-white">Topic Name</h3>
+          </div>
+          <button onclick="closeModal('topic-detail-drawer')" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Confidence</div>
+            <div id="drawer-confidence" class="text-lg font-bold text-slate-900 dark:text-white">50%</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Practice</div>
+            <div id="drawer-practice" class="text-lg font-bold text-slate-900 dark:text-white">50%</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Reviewed</div>
+            <div id="drawer-reviewed" class="text-sm font-bold text-slate-900 dark:text-white mt-1">Today</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 dark:bg-navy-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+          <div class="text-xs font-bold text-amber-500 uppercase">Main Reason for Risk Level</div>
+          <p id="drawer-reason" class="text-sm text-slate-800 dark:text-slate-200 font-medium">Reason details...</p>
+        </div>
+
+        <div class="bg-scope-green/10 p-4 rounded-xl border border-scope-green/30 space-y-1">
+          <div class="text-xs font-bold text-scope-green uppercase">Recommended Action</div>
+          <p id="drawer-action" class="text-sm text-slate-900 dark:text-slate-100 font-medium">Action details...</p>
+        </div>
+
+        <div id="drawer-notes-container" class="bg-slate-50 dark:bg-navy-900/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 hidden">
+          <div class="text-[11px] font-bold text-slate-400 uppercase">Notes</div>
+          <p id="drawer-notes" class="text-xs text-slate-700 dark:text-slate-300 italic"></p>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+          <form id="drawer-review-form" method="POST">
+            <button type="submit" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700">
+              Mark Reviewed Today
+            </button>
+          </form>
+
+          <div class="flex gap-2">
+            <button id="drawer-edit-btn" class="px-4 py-2 bg-slate-50 dark:bg-navy-900 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700">
+              Edit Parameters
+            </button>
+            <button onclick="closeModal('topic-detail-drawer')" class="px-4 py-2 bg-scope-green text-navy-950 font-bold text-xs rounded-xl">
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Topic Modal -->
+  <div id="edit-topic-modal" class="modal-overlay hidden">
+    <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-700/60 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800 mb-4">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Edit Exam Topic</h3>
+        <button onclick="closeModal('edit-topic-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form id="edit-topic-form" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Topic Name</label>
+          <input type="text" id="edit-topic-name" name="name" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span class="text-slate-400 uppercase">Confidence</span>
+              <span id="edit-confidence-val" class="text-scope-green font-bold">50%</span>
+            </div>
+            <input type="range" id="edit-topic-confidence" name="confidence" min="0" max="100" step="5" oninput="document.getElementById('edit-confidence-val').textContent = this.value + '%'" class="w-full">
+          </div>
+
+          <div class="bg-slate-50 dark:bg-navy-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span class="text-slate-400 uppercase">Practice Score</span>
+              <span id="edit-practice-val" class="text-amber-400 font-bold">50%</span>
+            </div>
+            <input type="range" id="edit-topic-practice" name="practice_score" min="0" max="100" step="5" oninput="document.getElementById('edit-practice-val').textContent = this.value + '%'" class="w-full">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Last Reviewed Date</label>
+          <input type="date" id="edit-topic-reviewed" name="last_reviewed" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Notes</label>
+          <textarea id="edit-topic-notes" name="notes" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-navy-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button type="button" onclick="closeModal('edit-topic-modal')" class="px-4 py-2 text-xs font-bold text-slate-400">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-scope-green text-navy-950 rounded-xl">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</body>
+</html>

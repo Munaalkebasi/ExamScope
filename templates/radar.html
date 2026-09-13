@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not active_exam or not topics %}
+  <!-- Empty State View -->
+  <div class="max-w-2xl mx-auto my-12 bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center shadow-xl relative overflow-hidden">
+    <div class="absolute inset-0 bg-radar-grid opacity-10 pointer-events-none"></div>
+
+    <div class="relative mx-auto w-24 h-24 mb-6 flex items-center justify-center">
+      <div class="absolute inset-0 rounded-full border-2 border-scope-green/40 animate-ping opacity-30"></div>
+      <div class="w-20 h-20 rounded-full bg-slate-100 dark:bg-navy-900 border-2 border-scope-green/60 shadow-[0_0_25px_rgba(16,185,129,0.2)] flex items-center justify-center font-bold text-scope-green">
+        SCANNER
+      </div>
+    </div>
+
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
+      Your radar is clear.
+    </h2>
+    <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
+      Add an upcoming exam and its topics to see where your biggest risks are before exam day.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <button onclick="openModal('add-exam-modal')" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-scope-green text-navy-950 font-extrabold text-sm rounded-xl hover:bg-emerald-400 shadow-xl shadow-scope-green/20">
+        + Add Your First Exam
+      </button>
+
+      <form action="{{ url_for('load_demo') }}" method="POST" class="w-full sm:w-auto">
+        <button type="submit" class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-100 dark:bg-navy-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-500 font-bold text-sm rounded-xl border border-slate-300 dark:border-slate-700">
+          Load Demo Data
+        </button>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <div class="space-y-6">
+    
+    <!-- Study Next Recommendation Banner -->
+    {% if readiness and readiness.study_next_recommendation %}
+    {% set rec = readiness.study_next_recommendation %}
+    <div class="bg-gradient-to-r from-slate-100 via-white to-scope-green/10 dark:from-navy-850 dark:via-navy-850 dark:to-scope-green/10 border border-scope-green/40 rounded-2xl p-5 sm:p-6 shadow-lg relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-48 h-full bg-scope-green/5 blur-2xl pointer-events-none"></div>
+
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+        <div class="space-y-2 max-w-2xl">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-scope-green/15 text-scope-green border border-scope-green/30 rounded-full text-xs font-bold uppercase tracking-wider">
+              Recommended Study Next
+            </span>
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Highest Current Exam Risk
+            </span>
+          </div>
+
+          <h3 class="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            Study <span class="text-scope-green underline decoration-scope-green/50 decoration-wavy underline-offset-4">{{ rec.topic_name }}</span>
+          </h3>
+
+          <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+            <strong class="text-amber-500">Reason:</strong> {{ rec.reason }}
+          </p>
+
+          <div class="flex items-center gap-2 text-xs text-slate-800 dark:text-slate-200 bg-white/90 dark:bg-navy-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-scope-green font-bold">Action:</span>
+            <span>{{ rec.action }}</span>
+          </div>
+        </div>
+
+        {% if readiness.top_risk_calc %}
+        <button onclick="openTopicDetailDrawer('{{ readiness.top_risk_calc.topic_id }}')" class="flex items-center justify-center gap-2 px-5 py-3 bg-scope-green text-navy-950 font-extrabold text-xs sm:text-sm rounded-xl hover:bg-emerald-400 shadow-lg shadow-scope-green/25 shrink-0">
+          <span>Analyze {{ rec.topic_name }} Risk</span>
+          ➔
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Radar Scanner & Quick Cards Container -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Interactive SVG Radar Scanner -->
+      <div class="lg:col-span-7 xl:col-span-8 flex justify-center">
+        <div class="relative w-full aspect-square max-w-[620px] mx-auto bg-slate-900 dark:bg-navy-950 border border-slate-700 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col items-center justify-center overflow-hidden">
+          <div class="absolute inset-0 bg-radar-grid opacity-20 pointer-events-none"></div>
+
+          <!-- Radar Scanner Header -->
+          <div class="w-full flex items-center justify-between z-10 mb-2 px-2 text-xs font-semibold text-slate-400">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-white tracking-widest text-[11px] uppercase">
+                ACTIVE SCANNER • POLAR RISK PROJECTION
+              </span>
+            </div>
+            <div class="hidden sm:flex items-center gap-3">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-risk-critical"></span> Critical</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-risk-high"></span> High</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-risk-moderate"></span> Moderate</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-risk-safe"></span> Safe</span>
+            </div>
+          </div>
+
+          <!-- SVG Visual Scope Radar -->
+          <div class="relative w-full h-full flex items-center justify-center">
+            <svg viewBox="0 0 600 600" class="w-full h-full select-none">
+              <defs>
+                <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25" />
+                  <stop offset="100%" stop-color="#EF4444" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="highGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.1" />
+                  <stop offset="100%" stop-color="#F59E0B" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+
+              <!-- Concentric Zones -->
+              <!-- SAFE (240px) -->
+              <circle cx="300" cy="300" r="240" fill="rgba(16, 185, 129, 0.02)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" stroke-dasharray="4 4" />
+              <text x="308" y="76" fill="rgba(16, 185, 129, 0.6)" font-size="10" font-weight="bold" font-family="monospace">OUTER: SAFE ZONE</text>
+
+              <!-- MODERATE (180px) -->
+              <circle cx="300" cy="300" r="180" fill="rgba(139, 92, 246, 0.03)" stroke="rgba(139, 92, 246, 0.25)" stroke-width="1.5" stroke-dasharray="4 4" />
+              <text x="308" y="136" fill="rgba(139, 92, 246, 0.6)" font-size="10" font-weight="bold" font-family="monospace">MODERATE RISK</text>
+
+              <!-- HIGH / NEEDS ATTENTION (120px) -->
+              <circle cx="300" cy="300" r="120" fill="url(#highGlow)" stroke="rgba(245, 158, 11, 0.35)" stroke-width="1.5" />
+              <text x="308" y="196" fill="rgba(245, 158, 11, 0.7)" font-size="10" font-weight="bold" font-family="monospace">MIDDLE: NEEDS ATTENTION</text>
+
+              <!-- CRITICAL (60px) -->
+              <circle cx="300" cy="300" r="60" fill="url(#centerGlow)" stroke="rgba(239, 68, 68, 0.5)" stroke-width="2" />
+              <text x="308" y="256" fill="rgba(239, 68, 68, 0.85)" font-size="10" font-weight="extrabold" font-family="monospace">CENTER: CRITICAL</text>
+
+              <!-- Grid Lines -->
+              <line x1="60" y1="300" x2="540" y2="300" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+              <line x1="300" y1="60" x2="300" y2="540" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+
+              <!-- Center Point -->
+              <circle cx="300" cy="300" r="3" fill="#EF4444" />
+              <circle cx="300" cy="300" r="8" fill="none" stroke="#EF4444" stroke-width="1" opacity="0.6" />
+
+              <!-- Animated Sweep Line -->
+              <g class="animate-radar-sweep">
+                <line x1="300" y1="300" x2="300" y2="60" stroke="rgba(16, 185, 129, 0.8)" stroke-width="2" />
+              </g>
+
+              <!-- Topic Radar Blip Nodes -->
+              {% if readiness and readiness.topic_calculations %}
+                {% for calc in readiness.topic_calculations %}
+                {% set color = '#EF4444' if calc.risk_level == 'Critical' else ('#F59E0B' if calc.risk_level == 'High' else ('#8B5CF6' if calc.risk_level == 'Moderate' else '#10B981')) %}
+                <g class="radar-blip cursor-pointer" data-topic-id="{{ calc.topic_id }}">
+                  <!-- Outer Pulse for Critical/High -->
+                  {% if calc.risk_level in ['Critical', 'High'] %}
+                  <circle cx="{{ calc.x }}" cy="{{ calc.y }}" r="14" fill="none" stroke="{{ color }}" stroke-width="1.5" opacity="0.6" />
+                  {% endif %}
+
+                  <!-- Outer Circle -->
+                  <circle cx="{{ calc.x }}" cy="{{ calc.y }}" r="9" fill="{{ color }}" fill-opacity="0.25" stroke="{{ color }}" stroke-width="2" />
+                  
+                  <!-- Core Dot -->
+                  <circle cx="{{ calc.x }}" cy="{{ calc.y }}" r="4.5" fill="{{ color }}" />
+
+                  <!-- Label Badge -->
+                  <g transform="translate({{ calc.x + 10 }}, {{ calc.y - 8 }})">
+                    <rect x="-4" y="-12" width="{{ calc.topic_name|length * 7 + 16 }}" height="18" rx="4" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+                    <text x="4" y="0" fill="#FFFFFF" font-size="11" font-weight="600" font-family="sans-serif">
+                      {{ calc.topic_name }}
+                    </text>
+                  </g>
+                </g>
+                {% endfor %}
+              {% endif %}
+            </svg>
+          </div>
+
+          <div class="w-full flex items-center justify-between text-[11px] text-slate-400 mt-2 px-2 border-t border-slate-700 dark:border-slate-800 pt-2 z-10">
+            <span>Click any topic blip on the radar for risk analysis & actions</span>
+            <span class="font-mono text-slate-400">{{ topics|length }} Signals Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats & Top Risk Cards -->
+      <div class="lg:col-span-5 xl:col-span-4 space-y-6">
+        
+        <!-- Overall Readiness Card -->
+        <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Exam Readiness
+            </h4>
+            <span class="text-xs text-slate-500 font-mono">{{ readiness.total_topics }} topics</span>
+          </div>
+
+          <div class="flex items-center justify-between my-2">
+            <!-- Circular Readiness Score Gauge -->
+            <div class="relative flex items-center justify-center w-24 h-24">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(148, 163, 184, 0.2)" stroke-width="10" />
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="{% if readiness.readiness_score < 50 %}#EF4444{% elif readiness.readiness_score < 70 %}#F59E0B{% else %}#10B981{% endif %}" stroke-width="10" stroke-dasharray="251" stroke-dashoffset="{{ 251 - (readiness.readiness_score / 100.0) * 251 }}" stroke-linecap="round" />
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span class="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {{ readiness.readiness_score }}%
+                </span>
+              </div>
+            </div>
+
+            <!-- Counts Grid -->
+            <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
+              <div class="bg-slate-50 dark:bg-navy-900 px-3 py-1.5 rounded-xl border border-risk-critical-border flex items-center justify-between gap-3">
+                <span class="text-risk-critical-light">Critical</span>
+                <span class="font-mono text-slate-900 dark:text-white">{{ readiness.critical_count }}</span>
+              </div>
+              <div class="bg-slate-50 dark:bg-navy-900 px-3 py-1.5 rounded-xl border border-risk-high-border flex items-center justify-between gap-3">
+                <span class="text-risk-high-light">High</span>
+                <span class="font-mono text-slate-900 dark:text-white">{{ readiness.high_count }}</span>
+              </div>
+              <div class="bg-slate-50 dark:bg-navy-900 px-3 py-1.5 rounded-xl border border-risk-moderate-border flex items-center justify-between gap-3">
+                <span class="text-risk-moderate-light">Moderate</span>
+                <span class="font-mono text-slate-900 dark:text-white">{{ readiness.moderate_count }}</span>
+              </div>
+              <div class="bg-slate-50 dark:bg-navy-900 px-3 py-1.5 rounded-xl border border-risk-safe-border flex items-center justify-between gap-3">
+                <span class="text-risk-safe-light">Safe</span>
+                <span class="font-mono text-slate-900 dark:text-white">{{ readiness.safe_count }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 3 Risk Topics -->
+        <div class="bg-white dark:bg-navy-850 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Top 3 Risk Topics
+            </h4>
+            <span class="text-xs text-slate-500">Urgent Focus</span>
+          </div>
+
+          <div class="space-y-2.5">
+            {% for item in top_risk_topics %}
+            <div onclick="openTopicDetailDrawer('{{ item.topic_id }}')" class="p-3.5 bg-slate-50 dark:bg-navy-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer flex items-center justify-between gap-3 group">
+              <div class="space-y-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-scope-green transition-colors truncate">
+                    {{ item.topic_name }}
+                  </span>
+                  <span class="badge-risk badge-risk-{{ item.risk_level|lower }}">{{ item.risk_level }}</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span>Confidence: {{ item.confidence_gap }}% gap</span>
+                  <span>Practice: {{ item.practice_gap }}% gap</span>
+                  <span>Reviewed: {{ item.days_since_review }}d ago</span>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <div class="text-xs font-mono font-bold text-slate-400">Risk</div>
+                <div class="text-sm font-mono font-extrabold text-slate-900 dark:text-white">{{ item.risk_score }}%</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+{% endif %}
+{% endblock %}
